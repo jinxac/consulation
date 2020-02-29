@@ -37,6 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'assistant',
+    'doctor',
+    'office',
+    'appointment',
+    'client'
 ]
 
 MIDDLEWARE = [
@@ -74,9 +79,17 @@ WSGI_APPLICATION = 'consultation.wsgi.application'
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.sqlite3',
+    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    # }
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'consultation',
+        'USER': 'root',
+        'PASSWORD': 'admin',
+        'HOST': 'localhost',
+        "OPTIONS": {"init_command": "SET sql_mode='STRICT_TRANS_TABLES'"}
     }
 }
 
