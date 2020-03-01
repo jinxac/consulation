@@ -14,11 +14,8 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
 
 **Doctor**
     
-   1. `PUT /api/v0/assign-office` - Assigns the doctor to an office.
    2. `PUT /api/v0/doctors/:id` - Update Doctor
    3. `POST /api/vo/doctors` - Create Doctor
-   3. `GET api/v0/doctors/:id/records` - Get records for a doctor
-   4. `GET api/v0/doctors/:id/appointments` - Get appointment schedule for the doctor
    
 **Client**
 
@@ -44,11 +41,12 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
    3. `GET /api/v0/offices/:id/insurances` - Get list of all insurances available at office
    4. `GET /api/v0/offices` - Get list of all the offices
    5. `POST /api/v0/offices/:id/appointments` - Schedule a new appointment
-   6. `PUT /api/v0/offices/:id/appointments/:id` - Cancel an appointment
+   6. `PUT /api/v0/offices/:id/appointments/:id` - Reschedule an appointment
    7. `DELETE /api/v0/offices/:id/appointments/:id` - Delete an appointment
-   8. `PUT /api/v0/offices/:id/update-doctor-availability` - Update availability of doctor
-   9. `PUT /api/v0/offices/:id/insurances/:id/` - Update an insurance
-
+   8. `GET /api/v0/offices/:id/appointments/:id/records` - Get records for an appointment
+   9. `PUT /api/v0/offices/:id/update-doctor-availability` - Update availability of doctor
+   10. `PUT /api/v0/offices/:id/insurances/:id/` - Update an insurance
+   11. `POST /api/v0/offices/:id/assign-doctor` - Assign a doctor to an office
 
 ### Steps
 
