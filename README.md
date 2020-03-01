@@ -1,10 +1,10 @@
 # Consultation
 
-###Database Scheme
+### Database Scheme
 
 Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fbOAbmOAVgRCoTlYPNOlvd).
 
-###Features
+### Features
 
 **Doctor**
     
@@ -43,7 +43,7 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
    9. `PUT /api/v0/offices/:id/insurances/:id/` - Update an insurance
 
 
-###Steps
+### Steps
 
    1. `virtualvenv venv`
    2. `source venv/bin/activate`
