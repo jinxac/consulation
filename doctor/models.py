@@ -2,6 +2,7 @@ from django.db import models
 
 
 from commons.models.models import LogicalDeleteModel
+from authservice.models import User
 
 
 class Specialization(LogicalDeleteModel):
@@ -9,8 +10,7 @@ class Specialization(LogicalDeleteModel):
 
 
 class Doctor(LogicalDeleteModel):
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     professional_statement = models.CharField(max_length=300, null = True, blank = True)
     practicing_from = models.DateTimeField()
     date_of_birth = models.DateTimeField()

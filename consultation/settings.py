@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'doctor',
     'office',
     'appointment',
-    'client'
+    'client',
+    'authservice'
 ]
 
 MIDDLEWARE = [
@@ -111,6 +112,12 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
 
 
 # Internationalization
