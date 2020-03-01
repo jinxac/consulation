@@ -36,9 +36,9 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
    2. `GET /api/v0/offices/:id/doctors` - Get list of doctors office
    3. `GET /api/v0/offices/:id/insurances` - Get list of all insurances available at office
    4. `GET /api/v0/offices` - Get list of all the offices
-   5. `POST /api/v0/offices/:id/appointment` - Schedule a new appointment
-   6. `PUT /api/v0/offices/:id/appointment/:id` - Cancel an appointment
-   7. `DELETE /api/v0/offices/:id/appointment/:id` - Delete an appointment
+   5. `POST /api/v0/offices/:id/appointments` - Schedule a new appointment
+   6. `PUT /api/v0/offices/:id/appointments/:id` - Cancel an appointment
+   7. `DELETE /api/v0/offices/:id/appointments/:id` - Delete an appointment
    8. `PUT /api/v0/offices/:id/update-doctor-availability` - Update availability of doctor
    9. `PUT /api/v0/offices/:id/insurances/:id/` - Update an insurance
 
