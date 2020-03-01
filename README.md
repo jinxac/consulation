@@ -6,6 +6,12 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
 
 ### Features
 
+
+**Auth**
+
+   1. `POST /api/v0/signup` - Signup user
+   2. `POST /api/v0/login` - Login user and get JWT token
+
 **Doctor**
     
    1. `PUT /api/v0/assign-office` - Assigns the doctor to an office.
@@ -24,6 +30,7 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
    6. `POST /api/v0/clients/:id/reviews` - Add a new feedback
    7. `GET /api/v0/clients/:id/reviews` - Get feedback list
    8. `PUT /api/v0/client/:id/reviews/:id` - Update a feedback
+   9. `POST /api/v0/clients`- Adding a new client
   
 **Assistant**
 
