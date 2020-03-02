@@ -16,7 +16,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from doctor.views import DoctorView
+from doctor.views import DoctorList, DoctorDetail
+from client.views import ClientList, ClientDetail
 from authservice.views import UserSignupView
 
 from rest_framework_simplejwt import views as jwt_views
@@ -25,6 +26,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
-    path('doctors/', DoctorView.as_view(), name='doctors'),
+    path('api/v0/doctors/', DoctorList.as_view(), name='doctors'),
+    path('api/v0/doctors/<int:pk>/', DoctorDetail.as_view(), name='doctor'),
+    path('api/v0/clients/', ClientList.as_view(), name='clients'),
+    path('api/v0/clients/<int:pk>/', ClientDetail.as_view(), name='client'),
     path('api/v0/register/', UserSignupView.as_view(), name='register'),
 ]

@@ -4,6 +4,8 @@ from django.db import models
 from commons.models.models import LogicalDeleteModel
 from authservice.models import User
 
+from .manager import DoctorManager
+
 
 class Specialization(LogicalDeleteModel):
     specialization_name = models.CharField(max_length=100)
@@ -12,9 +14,10 @@ class Specialization(LogicalDeleteModel):
 class Doctor(LogicalDeleteModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     professional_statement = models.CharField(max_length=300, null=True, blank=True)
-    practicing_from = models.DateTimeField()
-    date_of_birth = models.DateTimeField()
+    practicing_from = models.DateTimeField(blank=True, null=True)
+    date_of_birth = models.DateTimeField(blank=True, null=True)
     specializations = models.ManyToManyField(Specialization, through='DoctorSpecialization', blank=True)
+    objects = DoctorManager()
 
 
 class DoctorSpecialization(LogicalDeleteModel):
