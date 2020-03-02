@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.admin',
+    'authservice',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -42,7 +43,6 @@ INSTALLED_APPS = [
     'office',
     'appointment',
     'client',
-    'authservice'
 ]
 
 MIDDLEWARE = [
@@ -118,6 +118,8 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 }
+
+AUTH_USER_MODEL = 'authservice.User'
 
 
 # Internationalization

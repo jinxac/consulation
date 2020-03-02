@@ -1,3 +1,23 @@
-from django.shortcuts import render
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
 
-# Create your views here.
+from .serializer import UserSignupSerializer
+
+
+class UserSignupView(generics.CreateAPIView):
+    serializer_class = UserSignupSerializer
+    permission_classes = (
+        permissions.AllowAny,
+    )
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        validated_data["email"] = validated_data["email"].lower()
+
+        user = serializer.save()
+
+        resp = {"success": "Check your email"}
+
+        return Response(resp, status=status.HTTP_201_CREATED, headers={})
