@@ -8,13 +8,12 @@ from .manager import UserManager
 class RoleType(models.IntegerChoices):
     Doctor = 0
     Assistant = 1
-    Patient = 2
+    Client = 2
 
 
 class User(AbstractBaseUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    username = models.CharField(max_length=254, unique=True)
     email = models.EmailField(max_length=254, unique=True)
     is_active = models.BooleanField(default=False)
     dob = models.DateTimeField(null=True, blank=True)
