@@ -17,6 +17,7 @@ from django.contrib import admin
 from django.urls import path
 
 from doctor.views import DoctorView
+from authservice.views import UserSignupView
 
 from rest_framework_simplejwt import views as jwt_views
 
@@ -25,4 +26,5 @@ urlpatterns = [
     path('api/token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('doctors/', DoctorView.as_view(), name='doctors'),
+    path('api/v0/register/', UserSignupView.as_view(), name='register'),
 ]

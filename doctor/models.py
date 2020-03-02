@@ -11,10 +11,10 @@ class Specialization(LogicalDeleteModel):
 
 class Doctor(LogicalDeleteModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    professional_statement = models.CharField(max_length=300, null = True, blank = True)
+    professional_statement = models.CharField(max_length=300, null=True, blank=True)
     practicing_from = models.DateTimeField()
     date_of_birth = models.DateTimeField()
-    specializations = models.ManyToManyField(Specialization, through='DoctorSpecialization')
+    specializations = models.ManyToManyField(Specialization, through='DoctorSpecialization', blank=True)
 
 
 class DoctorSpecialization(LogicalDeleteModel):

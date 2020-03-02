@@ -2,21 +2,32 @@ from django.db import models
 
 from django.contrib.auth.models import AbstractBaseUser
 
+from .manager import UserManager
+
+
+class RoleType(models.IntegerChoices):
+    Doctor = 0
+    Assistant = 1
+    Patient = 2
+
 
 class User(AbstractBaseUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    username = models.CharField(max_length=254)
+    username = models.CharField(max_length=254, unique=True)
     email = models.EmailField(max_length=254, unique=True)
     is_active = models.BooleanField(default=False)
     dob = models.DateTimeField(null=True, blank=True)
-    first_name = models.CharField(max_length=255)
-    last_name = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15)
-    signup_at = models.DateTimeField(null=True, blank=True)
+    role = models.IntegerField(RoleType.choices, default=RoleType.Assistant)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
+
+    objects = UserManager()
+
 
     class Meta:
         verbose_name = 'user'
