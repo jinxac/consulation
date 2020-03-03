@@ -18,6 +18,8 @@ class DoctorList(APIView):
 
 
 class DoctorDetail(APIView):
+    permission_classes = (IsAuthenticated,)
+
     def get_object(self, pk):
         try:
             return Doctor.objects.get(pk=pk)
