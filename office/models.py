@@ -4,6 +4,7 @@ from commons.models.models import LogicalDeleteModel
 
 
 class Office(LogicalDeleteModel):
+    name = models.CharField(max_length=255)
     street_address = models.CharField(max_length=300)
     city = models.CharField(max_length=50)
     state = models.CharField(max_length=50)

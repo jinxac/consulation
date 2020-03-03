@@ -31,7 +31,7 @@ class Appointment(LogicalDeleteModel):
 class Record(LogicalDeleteModel):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE)
-    doc_id = models.CharField(max_length=255)
+    doc_id = models.CharField(max_length=255, null=True, blank=True)
 
     @property
     def record_url(self):

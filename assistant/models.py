@@ -9,6 +9,6 @@ from .manager import AssistantManager
 
 class Assistant(LogicalDeleteModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    office = models.ForeignKey(Office, on_delete=models.CASCADE)
+    office = models.ForeignKey(Office, on_delete=models.CASCADE, null=True)
 
     objects = AssistantManager()
