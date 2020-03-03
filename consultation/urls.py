@@ -20,6 +20,14 @@ from doctor.views import DoctorList, DoctorDetail
 from client.views import ClientList, ClientDetail
 from authservice.views import UserSignupView
 
+from office.views import OfficeList, OfficeDetail
+from assistant.views import AssistantList, AssistantDetail
+from appointment.views import AppointmentAssistantList, \
+    AppointmentAssistantDetail, \
+    AppointmentDoctorList, \
+    AppointmentDoctorDetail, \
+    UploadRecordView
+
 from rest_framework_simplejwt import views as jwt_views
 
 urlpatterns = [
@@ -31,4 +39,13 @@ urlpatterns = [
     path('api/v0/clients/', ClientList.as_view(), name='clients'),
     path('api/v0/clients/<int:pk>/', ClientDetail.as_view(), name='client'),
     path('api/v0/register/', UserSignupView.as_view(), name='register'),
+    path('api/v0/offices/', OfficeList.as_view(), name='offices'),
+    path('api/v0/offices/<int:pk>/', OfficeDetail.as_view(), name='office'),
+    path('api/v0/assistants/', AssistantList.as_view(), name='assistants'),
+    path('api/v0/assistants/<int:pk>/', AssistantDetail.as_view(), name='assistant'),
+    path('api/v0/appointments-assistant/', AppointmentAssistantList.as_view(), name='appointments_assistant'),
+    path('api/v0/appointments-assistant/<int:pk>', AppointmentAssistantDetail.as_view(), name='appointment_assistant'),
+    path('api/v0/appointments-doctor/', AppointmentDoctorList.as_view(), name='appointments_doctor'),
+    path('api/v0/appointments-doctor/<int:pk>', AppointmentDoctorDetail.as_view(), name='appointment_doctor'),
+    path('api/v0/add-record/', UploadRecordView.as_view(), name='add_record')
 ]
