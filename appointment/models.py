@@ -30,8 +30,8 @@ class Appointment(LogicalDeleteModel):
 
 class Record(LogicalDeleteModel):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE)
     doc_id = models.CharField(max_length=255, null=True, blank=True)
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, null=True)
 
     @property
     def record_url(self):
@@ -39,6 +39,12 @@ class Record(LogicalDeleteModel):
             self.client.id, self.doc_id
         )
         return get_upload_url(full_key)
+
+
+class DoctorShareRecord(LogicalDeleteModel):
+    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
+    record = models.ForeignKey(Record, on_delete=models.CASCADE)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE)
 
 
 class Feedback(LogicalDeleteModel):

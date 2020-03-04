@@ -26,7 +26,9 @@ from appointment.views import AppointmentAssistantList, \
     AppointmentAssistantDetail, \
     AppointmentDoctorList, \
     AppointmentDoctorDetail, \
-    UploadRecordView
+    UploadRecordView, \
+    DoctorShareRecordList, \
+    DoctorShareRecordDetail
 
 from rest_framework_simplejwt import views as jwt_views
 
@@ -47,5 +49,8 @@ urlpatterns = [
     path('api/v0/appointments-assistant/<int:pk>', AppointmentAssistantDetail.as_view(), name='appointment_assistant'),
     path('api/v0/appointments-doctor/', AppointmentDoctorList.as_view(), name='appointments_doctor'),
     path('api/v0/appointments-doctor/<int:pk>', AppointmentDoctorDetail.as_view(), name='appointment_doctor'),
-    path('api/v0/add-record/', UploadRecordView.as_view(), name='add_record')
+    path('api/v0/add-record/', UploadRecordView.as_view(), name='add_record'),
+    path('api/v0/share-records/', DoctorShareRecordList.as_view(), name='share_records'),
+    path('api/v0/share-records/<int:pk>', DoctorShareRecordDetail.as_view(), name='share_record'),
+
 ]
