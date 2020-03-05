@@ -1,7 +1,5 @@
 from django.db import models
-import boto3
 from django.conf import settings
-from botocore.exceptions import ClientError
 from boto.s3.connection import S3Connection
 
 from commons.models.models import LogicalDeleteModel
@@ -10,6 +8,7 @@ from rest_framework.exceptions import ValidationError
 
 from doctor.models import Doctor
 from client.models import Client
+from assistant.models import Assistant
 
 
 class AppointmentStatus(models.IntegerChoices):
@@ -18,6 +17,7 @@ class AppointmentStatus(models.IntegerChoices):
     Cancelled = 2
 
 
+# TODO: Can move to utils in future
 def get_image_signed_url(full_key, https=True, expiry=1800):
     if not full_key:
         raise ValidationError("Invalid doc id")
@@ -32,25 +32,11 @@ def get_image_signed_url(full_key, https=True, expiry=1800):
         force_http=(not https)
     )
 
-# TODO: Can move to utils in future
-# def get_upload_url(full_key):
-#     s3_client = boto3.client(
-#         "s3",
-#         aws_access_key_id=settings.AWS_ACCESS_KEY,
-#         aws_secret_access_key=settings.AWS_SECRET_KEY,
-#     )
-#     try:
-#         response = s3_client.generate_presigned_post(
-#             settings.AWS_S3_ACCOUNTS_BUCKET, full_key, ExpiresIn=1800
-#         )
-#     except ClientError as e:
-#         raise ValidationError(e)
-#     return response
-
 
 class Appointment(LogicalDeleteModel):
     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    assistant = models.ForeignKey(Assistant, on_delete=models.CASCADE)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     appointment_date = models.DateTimeField()
@@ -65,8 +51,8 @@ class Record(LogicalDeleteModel):
 
     @property
     def record_url(self):
-        full_key = "{}/{}".format(
-            self.client.id, self.doc_id
+        full_key = "{}/{}/{}".format(
+            self.client.id, self.appointment.id, self.doc_id
         )
         return get_image_signed_url(full_key)
 
@@ -81,7 +67,7 @@ class Feedback(LogicalDeleteModel):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
     appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE)
-    is_anonymous = models.BooleanField()
+    is_anonymous = models.BooleanField(default=False)
     rating = models.IntegerField()
     description = models.CharField(max_length=255)
 
