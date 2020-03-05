@@ -16,8 +16,7 @@ class UserSignupView(generics.CreateAPIView):
         validated_data = serializer.validated_data
         validated_data["email"] = validated_data["email"].lower()
 
-        user = serializer.save()
+        serializer.save()
 
         resp = {"success": "Check your email"}
-
         return Response(resp, status=status.HTTP_201_CREATED, headers={})
