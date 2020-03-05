@@ -18,5 +18,5 @@ class UserSignupView(generics.CreateAPIView):
 
         serializer.save()
 
-        resp = {"success": "Check your email"}
+        resp = {"success": "User has been created"}
         return Response(resp, status=status.HTTP_201_CREATED, headers={})

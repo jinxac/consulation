@@ -40,12 +40,14 @@ class UserSignupSerializer(LogicalDeleteModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         user, is_created = User.objects.get_or_create(email=validated_data['email'])
+
         if user.is_active:
             raise EmailAlreadyRegisteredException()
 
         User.objects.filter(email=validated_data["email"]).update(**validated_data)
         user = User.objects.get(email=validated_data["email"])
         user.set_password(validated_data["password"])
+
         # TODO: Can add email validation with token later
         user.is_active = True
         user.save()
