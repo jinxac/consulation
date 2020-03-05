@@ -6,11 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 
 from .models import Doctor
 from .serializer import DoctorSerializer
-from .permissions import IsDoctorUser
+from rest_framework.exceptions import ValidationError
 
 
 class DoctorList(APIView):
-    permission_classes = (IsAuthenticated, IsDoctorUser)
+    permission_classes = (IsAuthenticated, )
 
     def get(self, request):
         doctors = Doctor.objects.all()
@@ -19,7 +19,7 @@ class DoctorList(APIView):
 
 
 class DoctorDetail(APIView):
-    permission_classes = (IsAuthenticated, IsDoctorUser)
+    permission_classes = (IsAuthenticated, )
 
     def get_object(self, pk):
         try:
@@ -29,11 +29,16 @@ class DoctorDetail(APIView):
 
     def get(self, request, pk, format=None):
         doctor = self.get_object(pk)
+        if not doctor.user == request.user:
+            raise ValidationError("You cannot access this information")
         serializer = DoctorSerializer(doctor)
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
         doctor = self.get_object(pk)
+        if not doctor.user == request.user:
+            raise ValidationError("You don't have access to update this user")
+
         serializer = DoctorSerializer(doctor, data=request.data)
         if serializer.is_valid():
             serializer.save()

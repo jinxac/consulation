@@ -8,9 +8,14 @@ from .models import Assistant
 from .serializer import AssistantSerializer
 from .permissions import IsAssistantUser
 
+from doctor.permissions import IsDoctorUser
+
+from rest_framework.exceptions import ValidationError
+
+
 
 class AssistantList(APIView):
-    permission_classes = (IsAuthenticated, IsAssistantUser)
+    permission_classes = (IsAuthenticated, IsAssistantUser, IsDoctorUser)
 
     def get(self, request):
         doctors = Assistant.objects.all()
@@ -19,7 +24,7 @@ class AssistantList(APIView):
 
 
 class AssistantDetail(APIView):
-    permission_classes = (IsAuthenticated, IsAssistantUser)
+    permission_classes = (IsAuthenticated, IsAssistantUser, IsDoctorUser)
 
     def get_object(self, pk):
         try:
@@ -34,6 +39,8 @@ class AssistantDetail(APIView):
 
     def put(self, request, pk, format=None):
         assistant = self.get_object(pk)
+        if not assistant.user == request.user:
+            raise ValidationError("Cannot change info for this user")
         serializer = AssistantSerializer(assistant, data=request.data)
         if serializer.is_valid():
             serializer.save()

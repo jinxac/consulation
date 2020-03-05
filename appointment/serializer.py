@@ -4,6 +4,7 @@ from commons.models.serializer import LogicalDeleteModelSerializer
 from .models import Appointment
 from .models import Record
 from .models import DoctorShareRecord
+from .models import Feedback
 
 
 class AppointmentSerializer(LogicalDeleteModelSerializer):
@@ -34,6 +35,10 @@ class DoctorShareRecordSerializer(LogicalDeleteModelSerializer):
         fields = "__all__"
 
 
+class FeedbackSerializer(LogicalDeleteModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = "__all__"
 
 
 

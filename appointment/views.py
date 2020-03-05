@@ -24,10 +24,11 @@ from doctor.permissions import IsDoctorUser
 from client.permissions import IsClientUser
 
 
-from .models import Appointment, AppointmentStatus, DoctorShareRecord, Record
+from .models import Appointment, AppointmentStatus, DoctorShareRecord, Record, Feedback
 from .serializer import AppointmentSerializer,\
     RecordSerializer,\
-    DoctorShareRecordSerializer
+    DoctorShareRecordSerializer,\
+    FeedbackSerializer
 from .exceptions import AppointmentExistsException, \
     AppointmentStartDateException, \
     AppointmentEndDateException
@@ -51,14 +52,15 @@ def validate_appointment(new_data):
             raise AppointmentExistsException()
 
 
-class AppointmentAssistantList(APIView):
-    permission_classes = (IsAuthenticated, IsAssistantUser)
+class AppointmentList(APIView):
 
+    @permission_classes((IsAuthenticated, IsAssistantUser, IsDoctorUser))
     def get(self, request):
         doctors = Appointment.objects.all()
         serializer = AppointmentSerializer(doctors, many=True)
         return Response(serializer.data)
 
+    @permission_classes((IsAuthenticated, IsAssistantUser))
     def post(self, request):
         serializer = AppointmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -69,23 +71,24 @@ class AppointmentAssistantList(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class AppointmentAssistantDetail(APIView):
-
-    permission_classes = (IsAuthenticated, IsAssistantUser)
-
+class AppointmentDetail(APIView):
     def get_object(self, pk):
         try:
             return Appointment.objects.get(pk=pk)
         except Appointment.DoesNotExist:
             raise Http404
 
+    @permission_classes((IsAuthenticated, IsAssistantUser, IsDoctorUser))
     def get(self, request, pk, format=None):
         appointment = self.get_object(pk)
         serializer = AppointmentSerializer(appointment)
         return Response(serializer.data)
 
+    @permission_classes((IsAuthenticated, IsAssistantUser))
     def put(self, request, pk, format=None):
         appointment = self.get_object(pk)
+        if not appointment.assistant.user == request.user:
+            raise ValidationError("You don't have permissions to update this appointment")
         serializer = AppointmentSerializer(appointment, data=request.data)
         serializer.is_valid(raise_exception=True)
         new_data = serializer.validated_data
@@ -95,37 +98,38 @@ class AppointmentAssistantDetail(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class AppointmentDoctorList(APIView):
-    permission_classes = (IsAuthenticated, IsDoctorUser)
+@csrf_exempt
+@permission_classes((IsAuthenticated, IsDoctorUser))
+@require_http_methods(["POST"])
+def get_appointment_records(request):
+    load_data = json.loads(request.body)
+    appointment = load_data.get("appointment")
+    client = load_data.get("client")
+    doctor = load_data.get("doctor")
 
-    def get(self, request):
-        doctors = Appointment.objects.all()
-        serializer = AppointmentSerializer(doctors, many=True)
-        return Response(serializer.data)
+    if appointment is None:
+        raise ValidationError("appointment id required")
 
-    def post(self, request):
-        serializer = AppointmentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        new_data = serializer.validated_data
+    if not Appointment.objects.filter(id=appointment).exists():
+        raise ValidationError("Invalid appointment id")
 
-        validate_appointment(new_data)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    if client is None:
+        raise ValidationError("client id required")
 
+    if not Client.objects.filter(id=client).exists():
+        raise ValidationError("Invalid client id")
 
-class AppointmentDoctorDetail(APIView):
-    permission_classes = (IsAuthenticated, IsDoctorUser)
+    if doctor is None:
+        raise ValidationError("doctor id required")
 
-    def get_object(self, pk):
-        try:
-            return Appointment.objects.get(pk=pk)
-        except Appointment.DoesNotExist:
-            raise Http404
+    if not Doctor.objects.filter(id=doctor).exists():
+        raise ValidationError("Invalid doctor id")
 
-    def get(self, request, pk, format=None):
-        appointment = self.get_object(pk)
-        serializer = AppointmentSerializer(appointment)
-        return Response(serializer.data)
+    records = Record.objects.filter(client=client, appointment__doctor__id=doctor, is_revoked=False)
+
+    records = [{"client": record.client.id, "id": record.id, "appointment": record.appointment.id, "record_url": record.record_url} for record in records]
+
+    return JsonResponse(records, safe=False)
 
 
 class UploadRecordView(viewsets.ModelViewSet):
@@ -133,13 +137,13 @@ class UploadRecordView(viewsets.ModelViewSet):
     serializer_class = RecordSerializer
     parser_classes = (FormParser, MultiPartParser)
 
-    def save_document(self, content, client_id):
+    def save_document(self, content, appointment_id, client_id):
         conn = boto.connect_s3(aws_access_key_id=settings.AWS_ACCESS_KEY, aws_secret_access_key=settings.AWS_SECRET_KEY)
         bucket_name = settings.AWS_S3_ACCOUNTS_BUCKET
         bucket = conn.get_bucket(bucket_name, validate=False)
 
         doc_id = str(uuid.uuid4())
-        full_key = "{}/{}".format(client_id, doc_id)
+        full_key = "{}/{}/{}".format(client_id, appointment_id, doc_id)
         k = Key(bucket)
         k.key = full_key
         k.set_contents_from_file(content, headers={'Content-Type': 'application/zip'})
@@ -163,7 +167,7 @@ class UploadRecordView(viewsets.ModelViewSet):
         if Record.objects.filter(client=client.id, appointment=appointment.id).exists():
             raise ValidationError("Already have a record for this appointment")
 
-        doc_id = self.save_document(file_obj, client.id)
+        doc_id = self.save_document(file_obj, appointment.id, client.id)
         serializer.save(doc_id=doc_id)
 
     def perform_update(self, serializer):
@@ -181,7 +185,7 @@ class UploadRecordView(viewsets.ModelViewSet):
         if not Appointment.objects.filter(id=appointment.id).exists():
             raise ValidationError("Invalid Appointment id")
 
-        doc_id = self.save_document(file_obj, client.id)
+        doc_id = self.save_document(file_obj, appointment.id, client.id)
         serializer.save(doc_id=doc_id)
 
 
@@ -220,48 +224,14 @@ def revoke_record_access(request):
     return JsonResponse({"message": "Successully revoked"}, safe=False)
 
 
-@csrf_exempt
-@permission_classes((IsAuthenticated, IsDoctorUser))
-@require_http_methods(["POST"])
-def get_appointment_records(request):
-    load_data = json.loads(request.body)
-    appointment = load_data.get("appointment")
-    client = load_data.get("client")
-    doctor = load_data.get("doctor")
-
-    if appointment is None:
-        raise ValidationError("appointment id required")
-
-    if not Appointment.objects.filter(id=appointment).exists():
-        raise ValidationError("Invalid appointment id")
-
-    if client is None:
-        raise ValidationError("client id required")
-
-    if not Client.objects.filter(id=client).exists():
-        raise ValidationError("Invalid client id")
-
-    if doctor is None:
-        raise ValidationError("doctor id required")
-
-    if not Doctor.objects.filter(id=doctor).exists():
-        raise ValidationError("Invalid doctor id")
-
-    records = Record.objects.filter(client=client, appointment__doctor__id=doctor, is_revoked=False)
-
-    records = [{"client": record.client.id, "id": record.id, "appointment": record.appointment.id, "record_url": record.record_url} for record in records]
-
-    return JsonResponse(records, safe=False)
-
-
 class DoctorShareRecordList(APIView):
-    permission_classes = (IsAuthenticated, IsDoctorUser)
-
+    @permission_classes((IsAuthenticated, IsClientUser, IsDoctorUser))
     def get(self, request):
         share_records = DoctorShareRecord.objects.all()
         serializer = DoctorShareRecordSerializer(share_records, many=True)
         return Response(serializer.data)
 
+    @permission_classes((IsAuthenticated, IsClientUser))
     def post(self, request):
         serializer = AppointmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -282,7 +252,7 @@ class DoctorShareRecordList(APIView):
 
 class DoctorShareRecordDetail(APIView):
 
-    permission_classes = (IsAuthenticated, IsDoctorUser)
+    permission_classes = (IsAuthenticated, IsDoctorUser, IsClientUser)
 
     def get_object(self, pk):
         try:
@@ -294,4 +264,51 @@ class DoctorShareRecordDetail(APIView):
         shared_record = self.get_object(pk)
         serializer = AppointmentSerializer(shared_record)
         return Response(serializer.data)
+
+
+class FeedbackList(APIView):
+    @permission_classes((IsAuthenticated, ))
+    def get(self, request):
+        feedbacks = Feedback.objects.all()
+        serializer = FeedbackSerializer(feedbacks, many=True)
+        return Response(serializer.data)
+
+    @permission_classes((IsAuthenticated, IsClientUser))
+    def post(self, request):
+        serializer = FeedbackSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_data = serializer.validated_data
+
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class FeedbackDetail(APIView):
+    def get_object(self, pk):
+        try:
+            return Feedback.objects.get(pk=pk)
+        except Feedback.DoesNotExist:
+            raise Http404
+
+    @permission_classes((IsDoctorUser, IsClientUser, IsAssistantUser, IsAuthenticated))
+    def get(self, request, pk, format=None):
+        feedback = self.get_object(pk)
+        serializer = FeedbackSerializer(feedback)
+        return Response(serializer.data)
+
+    @permission_classes((IsClientUser, IsAuthenticated))
+    def put(self, request, pk, format=None):
+        feedback = self.get_object(pk)
+        serializer = FeedbackSerializer(feedback, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
 
