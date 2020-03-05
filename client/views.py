@@ -2,12 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import Http404
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+
 
 from .models import Client
 from .serializer import ClientSerializer
+from .permissions import IsClientUser
 
 
 class ClientList(APIView):
+    permission_classes = (IsAuthenticated, IsClientUser)
+
     def get(self, request):
         clients = Client.objects.all()
         serializer = ClientSerializer(clients, many=True)
@@ -15,6 +20,8 @@ class ClientList(APIView):
 
 
 class ClientDetail(APIView):
+    permission_classes = (IsAuthenticated, IsClientUser)
+
     def get_object(self, pk):
         try:
             return Client.objects.get(pk=pk)
