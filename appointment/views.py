@@ -1,17 +1,21 @@
+from django.views.decorators.http import require_http_methods
+from rest_framework.decorators import permission_classes
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError
-from rest_framework.parsers import FileUploadParser
-from rest_framework import status
-from django.http import Http404
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework import status, viewsets
+from django.http import Http404, JsonResponse
 from rest_framework.permissions import IsAuthenticated
 from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
+from django.views.decorators.csrf import csrf_exempt
 import uuid
 import boto
 from boto.s3.key import Key
+import json
+
 
 from doctor.models import Doctor
 from client.models import Client
@@ -124,39 +128,130 @@ class AppointmentDoctorDetail(APIView):
         return Response(serializer.data)
 
 
-class UploadRecordView(APIView):
-    parser_class = (FileUploadParser,)
-    permission_classes = (IsAuthenticated, IsClientUser)
+class UploadRecordView(viewsets.ModelViewSet):
+    queryset = Record.objects.all()
+    serializer_class = RecordSerializer
+    parser_classes = (FormParser, MultiPartParser)
 
-    def create_temp_file(self, size, file_name, file_content):
-        random_file_name = ''.join([str(uuid.uuid4().hex[:6]), file_name])
-        with open(random_file_name, 'w') as f:
-            f.write(str(file_content) * size)
-        return random_file_name
-
-    def save_document(self, content, content_type="application/zip"):
+    def save_document(self, content, client_id):
         conn = boto.connect_s3(aws_access_key_id=settings.AWS_ACCESS_KEY, aws_secret_access_key=settings.AWS_SECRET_KEY)
         bucket_name = settings.AWS_S3_ACCOUNTS_BUCKET
         bucket = conn.get_bucket(bucket_name, validate=False)
 
         doc_id = str(uuid.uuid4())
-        full_key = doc_id
+        full_key = "{}/{}".format(client_id, doc_id)
         k = Key(bucket)
         k.key = full_key
         k.set_contents_from_file(content, headers={'Content-Type': 'application/zip'})
         return doc_id
 
-    def post(self, request, format=None):
-        serializer = RecordSerializer(data=request.data)
+    def perform_create(self, serializer):
         serializer.is_valid(raise_exception=True)
-        new_data = serializer.validated_data
-        if 'file' not in request.data:
-            raise ParseError("Empty content")
+        file_obj = serializer.validated_data['file']
+        appointment = serializer.validated_data['appointment']
+        client = serializer.validated_data['client']
 
-        file = new_data['file']
-        doc_id = self.save_document(file)
+        if appointment is None:
+            raise ValidationError("Please pass appointment id")
 
-        return Response(status=status.HTTP_201_CREATED)
+        if not Client.objects.filter(id=client.id).exists():
+            raise ValidationError("Invalid Client id")
+
+        if not Appointment.objects.filter(id=appointment.id).exists():
+            raise ValidationError("Invalid Appointment id")
+
+        if Record.objects.filter(client=client.id, appointment=appointment.id).exists():
+            raise ValidationError("Already have a record for this appointment")
+
+        doc_id = self.save_document(file_obj, client.id)
+        serializer.save(doc_id=doc_id)
+
+    def perform_update(self, serializer):
+        serializer.is_valid(raise_exception=True)
+        file_obj = serializer.validated_data['file']
+        appointment = serializer.validated_data['appointment']
+        client = serializer.validated_data['client']
+
+        if appointment is None:
+            raise ValidationError("Please pass appointment id")
+
+        if not Client.objects.filter(id=client.id).exists():
+            raise ValidationError("Invalid Client id")
+
+        if not Appointment.objects.filter(id=appointment.id).exists():
+            raise ValidationError("Invalid Appointment id")
+
+        doc_id = self.save_document(file_obj, client.id)
+        serializer.save(doc_id=doc_id)
+
+
+@csrf_exempt
+@permission_classes((IsAuthenticated, IsClientUser))
+@require_http_methods(["POST"])
+def revoke_record_access(request):
+    load_data = json.loads(request.body)
+    appointment = load_data.get("appointment")
+    client = load_data.get("client")
+    record = load_data.get("record")
+
+    if appointment is None:
+        raise ValidationError("appointment id required")
+
+    if not Appointment.objects.filter(id=appointment).exists():
+        raise ValidationError("Invalid appointment id")
+
+    if client is None:
+        raise ValidationError("client id required")
+
+    if not Client.objects.filter(id=client).exists():
+        raise ValidationError("Invalid client id")
+
+    if record is None:
+        raise ValidationError("record id required")
+
+    if not Record.objects.filter(id=record).exists():
+        raise ValidationError("Invalid record id")
+
+    record = Record.objects.get(client=client, appointment=appointment, id=record)
+
+    record.is_revoked = True
+    record.save()
+
+    return JsonResponse({"message": "Successully revoked"}, safe=False)
+
+
+@csrf_exempt
+@permission_classes((IsAuthenticated, IsDoctorUser))
+@require_http_methods(["POST"])
+def get_appointment_records(request):
+    load_data = json.loads(request.body)
+    appointment = load_data.get("appointment")
+    client = load_data.get("client")
+    doctor = load_data.get("doctor")
+
+    if appointment is None:
+        raise ValidationError("appointment id required")
+
+    if not Appointment.objects.filter(id=appointment).exists():
+        raise ValidationError("Invalid appointment id")
+
+    if client is None:
+        raise ValidationError("client id required")
+
+    if not Client.objects.filter(id=client).exists():
+        raise ValidationError("Invalid client id")
+
+    if doctor is None:
+        raise ValidationError("doctor id required")
+
+    if not Doctor.objects.filter(id=doctor).exists():
+        raise ValidationError("Invalid doctor id")
+
+    records = Record.objects.filter(client=client, appointment__doctor__id=doctor, is_revoked=False)
+
+    records = [{"client": record.client.id, "id": record.id, "appointment": record.appointment.id, "record_url": record.record_url} for record in records]
+
+    return JsonResponse(records, safe=False)
 
 
 class DoctorShareRecordList(APIView):
