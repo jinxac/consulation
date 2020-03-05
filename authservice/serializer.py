@@ -22,6 +22,21 @@ class UserSignupSerializer(LogicalDeleteModelSerializer):
         model = User
         fields = "__all__"
 
+    def assign_doctor_to_group(self, user):
+        Doctor.objects.create_user(user=user)
+        doctor_group = Group.objects.get(name='doctor')
+        user.groups.add(doctor_group)
+
+    def assign_assistant_to_group(self, user):
+        Assistant.objects.create_user(user=user)
+        assistant_group = Group.objects.get(name='assistant')
+        user.groups.add(assistant_group)
+
+    def assign_client_to_group(self, user):
+        Client.objects.create_user(user=user)
+        client_group = Group.objects.get(name='client')
+        user.groups.add(client_group)
+
     @transaction.atomic
     def create(self, validated_data):
         user, is_created = User.objects.get_or_create(email=validated_data['email'])
@@ -34,18 +49,14 @@ class UserSignupSerializer(LogicalDeleteModelSerializer):
         # TODO: Can add email validation with token later
         user.is_active = True
         user.save()
+
         if user.role == RoleType.Assistant:
-            Assistant.objects.create_user(user=user)
-            assistant_group = Group.objects.get(name='assistant')
-            user.groups.add(assistant_group)
+            self.assign_assistant_to_group(user)
 
         if user.role == RoleType.Doctor:
-            Doctor.objects.create_user(user=user)
-            doctor_group = Group.objects.get(name='doctor')
-            user.groups.add(doctor_group)
+            self.assign_doctor_to_group(user)
+
         if user.role == RoleType.Client:
-            Client.objects.create_user(user=user)
-            client_group = Group.objects.get(name='client')
-            user.groups.add(client_group)
+            self.assign_client_to_group(user)
 
         return user
