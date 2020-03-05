@@ -45,7 +45,7 @@ class UserSignupSerializer(LogicalDeleteModelSerializer):
             user.groups.add(doctor_group)
         if user.role == RoleType.Client:
             Client.objects.create_user(user=user)
-            assistant_group = Group.objects.get(name='client')
-            user.groups.add(assistant_group)
+            client_group = Group.objects.get(name='client')
+            user.groups.add(client_group)
 
         return user
