@@ -15,6 +15,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.conf.urls import include, url
+
+
 
 from doctor.views import DoctorList, DoctorDetail
 from client.views import ClientList, ClientDetail
@@ -28,11 +31,19 @@ from appointment.views import AppointmentAssistantList, \
     AppointmentDoctorDetail, \
     UploadRecordView, \
     DoctorShareRecordList, \
-    DoctorShareRecordDetail
+    DoctorShareRecordDetail, \
+    get_appointment_records, \
+    revoke_record_access
 
 from rest_framework_simplejwt import views as jwt_views
 
+from rest_framework import routers
+router = routers.DefaultRouter()
+router.register('add-record', UploadRecordView, basename='cutareadel')
+router.register('add-record/<int:pk>', UploadRecordView, basename='cutareadel')
+
 urlpatterns = [
+    url(r'^api/v0/', include(router.urls)),
     path('admin/', admin.site.urls),
     path('api/token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
@@ -49,7 +60,9 @@ urlpatterns = [
     path('api/v0/appointments-assistant/<int:pk>', AppointmentAssistantDetail.as_view(), name='appointment_assistant'),
     path('api/v0/appointments-doctor/', AppointmentDoctorList.as_view(), name='appointments_doctor'),
     path('api/v0/appointments-doctor/<int:pk>', AppointmentDoctorDetail.as_view(), name='appointment_doctor'),
-    path('api/v0/add-record/', UploadRecordView.as_view(), name='add_record'),
+    path('api/v0/appointments-records/', get_appointment_records, name='appointment_records'),
+    path('api/v0/revoke-record/', revoke_record_access, name='revoke-record'),
+    # path('api/v0/add-record/', UploadRecordView, name='add_record'),
     path('api/v0/share-records/', DoctorShareRecordList.as_view(), name='share_records'),
     path('api/v0/share-records/<int:pk>', DoctorShareRecordDetail.as_view(), name='share_record'),
 
