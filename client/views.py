@@ -1,3 +1,4 @@
+from rest_framework.decorators import permission_classes
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import Http404
@@ -8,10 +9,13 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Client
 from .serializer import ClientSerializer
 from .permissions import IsClientUser
+from assistant.permissions import IsAssistantUser
+from doctor.permissions import IsDoctorUser
+from rest_framework.exceptions import ValidationError
 
 
 class ClientList(APIView):
-    permission_classes = (IsAuthenticated, IsClientUser)
+    permission_classes = (IsAuthenticated, IsAssistantUser, IsDoctorUser)
 
     def get(self, request):
         clients = Client.objects.all()
@@ -20,7 +24,7 @@ class ClientList(APIView):
 
 
 class ClientDetail(APIView):
-    permission_classes = (IsAuthenticated, IsClientUser)
+    # permission_classes = (IsAuthenticated, IsClientUser)
 
     def get_object(self, pk):
         try:
@@ -28,13 +32,17 @@ class ClientDetail(APIView):
         except Client.DoesNotExist:
             raise Http404
 
+    @permission_classes((IsAuthenticated, IsDoctorUser, IsAssistantUser, IsClientUser))
     def get(self, request, pk, format=None):
         client = self.get_object(pk)
         serializer = ClientSerializer(client)
         return Response(serializer.data)
 
+    @permission_classes((IsAuthenticated, IsClientUser, IsAssistantUser))
     def put(self, request, pk, format=None):
         client = self.get_object(pk)
+        if not client.user == request.user:
+            raise ValidationError("Cannot update info for this user")
         serializer = ClientSerializer(client, data=request.data)
         if serializer.is_valid():
             serializer.save()
