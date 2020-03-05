@@ -6,10 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 
 from .models import Doctor
 from .serializer import DoctorSerializer
+from .permissions import IsDoctorUser
 
 
 class DoctorList(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsDoctorUser)
 
     def get(self, request):
         doctors = Doctor.objects.all()
@@ -18,7 +19,7 @@ class DoctorList(APIView):
 
 
 class DoctorDetail(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsDoctorUser)
 
     def get_object(self, pk):
         try:

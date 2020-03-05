@@ -8,7 +8,6 @@ from rest_framework.permissions import IsAuthenticated
 from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
-from django.views.decorators.http import require_http_methods
 from rest_framework.exceptions import ValidationError
 import uuid
 import boto
@@ -16,6 +15,10 @@ from boto.s3.key import Key
 
 from doctor.models import Doctor
 from client.models import Client
+from assistant.permissions import IsAssistantUser
+from doctor.permissions import IsDoctorUser
+from client.permissions import IsClientUser
+
 
 from .models import Appointment, AppointmentStatus, DoctorShareRecord, Record
 from .serializer import AppointmentSerializer,\
@@ -45,7 +48,7 @@ def validate_appointment(new_data):
 
 
 class AppointmentAssistantList(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsAssistantUser)
 
     def get(self, request):
         doctors = Appointment.objects.all()
@@ -64,7 +67,7 @@ class AppointmentAssistantList(APIView):
 
 class AppointmentAssistantDetail(APIView):
 
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsAssistantUser)
 
     def get_object(self, pk):
         try:
@@ -89,7 +92,7 @@ class AppointmentAssistantDetail(APIView):
 
 
 class AppointmentDoctorList(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsDoctorUser)
 
     def get(self, request):
         doctors = Appointment.objects.all()
@@ -107,8 +110,7 @@ class AppointmentDoctorList(APIView):
 
 
 class AppointmentDoctorDetail(APIView):
-
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsDoctorUser)
 
     def get_object(self, pk):
         try:
@@ -124,7 +126,7 @@ class AppointmentDoctorDetail(APIView):
 
 class UploadRecordView(APIView):
     parser_class = (FileUploadParser,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsClientUser)
 
     def create_temp_file(self, size, file_name, file_content):
         random_file_name = ''.join([str(uuid.uuid4().hex[:6]), file_name])
@@ -158,7 +160,7 @@ class UploadRecordView(APIView):
 
 
 class DoctorShareRecordList(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsDoctorUser)
 
     def get(self, request):
         share_records = DoctorShareRecord.objects.all()
@@ -185,7 +187,7 @@ class DoctorShareRecordList(APIView):
 
 class DoctorShareRecordDetail(APIView):
 
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsDoctorUser)
 
     def get_object(self, pk):
         try:
