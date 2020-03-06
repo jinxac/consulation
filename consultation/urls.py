@@ -26,6 +26,8 @@ from office.views import OfficeList, OfficeDetail
 from assistant.views import AssistantList, AssistantDetail
 from appointment.views import AppointmentList, \
     AppointmentDetail, \
+    AppointmentAssistantList,\
+    AppointmentAssistantDetail,\
     UploadRecordView, \
     DoctorShareRecordList, \
     DoctorShareRecordDetail, \
@@ -38,7 +40,7 @@ from rest_framework_simplejwt import views as jwt_views
 
 from rest_framework import routers
 router = routers.DefaultRouter()
-router.register('clients/add-record', UploadRecordView, basename='cutareadel')
+router.register('clients/records/', UploadRecordView, basename='cutareadel')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -53,10 +55,9 @@ urlpatterns = [
     path('api/v0/doctors/<int:pk>/', DoctorDetail.as_view(), name='doctor'),
 
     # Client
+    path('api/v0/clients/', ClientList.as_view(), name='clients'),
     path('api/v0/clients/<int:pk>/', ClientDetail.as_view(), name='client'),
     path('api/v0/clients/revoke-record/', revoke_record_access, name='revoke-record'),
-    path('api/v0/clients/share-records/', DoctorShareRecordList.as_view(), name='share_records'),
-    path('api/v0/clients/share-records/<int:pk>', DoctorShareRecordDetail.as_view(), name='share_record'),
 
     # Office
     path('api/v0/offices/', OfficeList.as_view(), name='offices'),
@@ -69,10 +70,14 @@ urlpatterns = [
     # Appointment
     path('api/v0/appointments/', AppointmentList.as_view(), name='appointments'),
     path('api/v0/appointments/<int:pk>', AppointmentDetail.as_view(), name='appointment'),
-    path('api/v0/appointments/<int:pk>/records/', get_appointment_records, name='appointment_records'),
+    path('api/v0/assistant/appointments/', AppointmentAssistantList.as_view(), name='assistant_appointments'),
+    path('api/v0/assistant/appointments/<int:pk>/', AppointmentAssistantDetail.as_view(), name='assistant_appointment'),
+    path('api/v0/appointments/records/', get_appointment_records, name='appointment_records'),
     path('api/v0/feedback/', FeedbackList.as_view(), name='feedback_list'),
     path('api/v0/feedback/<int:pk>/', FeedbackDetail.as_view(), name='feedback'),
 
     # Records
     url(r'^api/v0/', include(router.urls)),
+    path('api/v0/shared-records/', DoctorShareRecordList.as_view(), name='share_records'),
+    path('api/v0/shared-records/<int:pk>', DoctorShareRecordDetail.as_view(), name='share_record')
 ]
