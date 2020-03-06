@@ -57,7 +57,11 @@ def validate_appointment(new_data):
 class AppointmentAssistantList(APIView):
     @permission_classes((IsAuthenticated, IsAssistantUser))
     def get(self, request):
-        doctors = Appointment.objects.filter(assistant__user=request.user, appointment_date=timezone.now())
+        doctors = Appointment.objects.filter(
+            assistant__user=request.user,
+            appointment_date__gte=(timezone.now()),
+            appointment_date__lte=(timezone.now() + timedelta(days=1))
+        )
         serializer = AppointmentSerializer(doctors, many=True)
         return Response(serializer.data)
 
@@ -75,7 +79,11 @@ class AppointmentAssistantList(APIView):
 class AppointmentList(APIView):
     @permission_classes((IsAuthenticated, IsDoctorUser))
     def get(self, request):
-        doctors = Appointment.objects.filter(doctor__user=request.user, appointment_date=timezone.now())
+        doctors = Appointment.objects.filter(
+            doctor__user=request.user,
+            appointment_date__gte=(timezone.now()),
+            appointment_date__lte=(timezone.now() + timedelta(days=1))
+        )
         serializer = AppointmentSerializer(doctors, many=True)
         return Response(serializer.data)
 
