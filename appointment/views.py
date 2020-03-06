@@ -1,6 +1,7 @@
 from django.views.decorators.http import require_http_methods
-from rest_framework.decorators import permission_classes
+from rest_framework.decorators import permission_classes, api_view
 from rest_framework.views import APIView
+from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status, viewsets
@@ -22,6 +23,7 @@ from client.models import Client
 from assistant.permissions import IsAssistantUser
 from doctor.permissions import IsDoctorUser
 from client.permissions import IsClientUser
+from authservice.models import RoleType
 
 
 from .models import Appointment, AppointmentStatus, DoctorShareRecord, Record, Feedback
@@ -52,11 +54,10 @@ def validate_appointment(new_data):
             raise AppointmentExistsException()
 
 
-class AppointmentList(APIView):
-
-    @permission_classes((IsAuthenticated, IsAssistantUser, IsDoctorUser))
+class AppointmentAssistantList(APIView):
+    @permission_classes((IsAuthenticated, IsAssistantUser))
     def get(self, request):
-        doctors = Appointment.objects.all()
+        doctors = Appointment.objects.filter(assistant__user=request.user)
         serializer = AppointmentSerializer(doctors, many=True)
         return Response(serializer.data)
 
@@ -71,14 +72,22 @@ class AppointmentList(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class AppointmentDetail(APIView):
+class AppointmentList(APIView):
+    @permission_classes((IsAuthenticated, IsDoctorUser))
+    def get(self, request):
+        doctors = Appointment.objects.filter(doctor__user=request.user)
+        serializer = AppointmentSerializer(doctors, many=True)
+        return Response(serializer.data)
+
+
+class AppointmentAssistantDetail(APIView):
     def get_object(self, pk):
         try:
             return Appointment.objects.get(pk=pk)
         except Appointment.DoesNotExist:
             raise Http404
 
-    @permission_classes((IsAuthenticated, IsAssistantUser, IsDoctorUser))
+    @permission_classes((IsAuthenticated, IsAssistantUser))
     def get(self, request, pk, format=None):
         appointment = self.get_object(pk)
         serializer = AppointmentSerializer(appointment)
@@ -98,34 +107,65 @@ class AppointmentDetail(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@csrf_exempt
-@permission_classes((IsAuthenticated, IsDoctorUser))
-@require_http_methods(["POST"])
-def get_appointment_records(request):
-    load_data = json.loads(request.body)
-    appointment = load_data.get("appointment")
-    client = load_data.get("client")
-    doctor = load_data.get("doctor")
+class AppointmentDetail(APIView):
+    def get_object(self, pk):
+        try:
+            return Appointment.objects.get(pk=pk)
+        except Appointment.DoesNotExist:
+            raise Http404
 
-    if appointment is None:
+    @permission_classes((IsAuthenticated, IsDoctorUser))
+    def get(self, request, pk, format=None):
+        appointment = self.get_object(pk)
+        serializer = AppointmentSerializer(appointment)
+        return Response(serializer.data)
+
+
+@csrf_exempt
+@permission_classes((IsAuthenticated, IsDoctorUser, IsClientUser))
+@api_view(["POST"])
+def get_appointment_records(request):
+    print("in herere")
+    load_data = json.loads(request.body)
+    client_id = load_data.get("client")
+    doctor_id = load_data.get("doctor")
+    appointment_id = load_data.get("appointment")
+
+    if appointment_id is None:
         raise ValidationError("appointment id required")
 
-    if not Appointment.objects.filter(id=appointment).exists():
+    if not Appointment.objects.filter(id=appointment_id).exists():
         raise ValidationError("Invalid appointment id")
 
-    if client is None:
+    if client_id is None:
         raise ValidationError("client id required")
 
-    if not Client.objects.filter(id=client).exists():
+    if not Client.objects.filter(id=client_id).exists():
         raise ValidationError("Invalid client id")
 
-    if doctor is None:
+    if doctor_id is None:
         raise ValidationError("doctor id required")
 
-    if not Doctor.objects.filter(id=doctor).exists():
+    if not Doctor.objects.filter(id=doctor_id).exists():
         raise ValidationError("Invalid doctor id")
 
-    records = Record.objects.filter(client=client, appointment__doctor__id=doctor, is_revoked=False)
+    doctor = Doctor.objects.get(id=doctor_id)
+    client = Client.objects.get(id=client_id)
+
+    print("test")
+    print(request.user)
+    print(client.user)
+
+    if request.user.role == RoleType.Doctor:
+        if not request.user == doctor.user:
+            raise ValidationError("You don't not have access to update this data")
+
+    if request.user.role == RoleType.Client:
+        if not request.user == client.user:
+            raise ValidationError("You don't not have access to update this data")
+
+
+    records = Record.objects.filter(client=client, appointment__doctor=doctor, is_revoked=False)
 
     records = [{"client": record.client.id, "id": record.id, "appointment": record.appointment.id, "record_url": record.record_url} for record in records]
 
@@ -191,7 +231,7 @@ class UploadRecordView(viewsets.ModelViewSet):
 
 @csrf_exempt
 @permission_classes((IsAuthenticated, IsClientUser))
-@require_http_methods(["POST"])
+@api_view(["POST"])
 def revoke_record_access(request):
     load_data = json.loads(request.body)
     appointment = load_data.get("appointment")
@@ -216,6 +256,11 @@ def revoke_record_access(request):
     if not Record.objects.filter(id=record).exists():
         raise ValidationError("Invalid record id")
 
+    client = Client.objects.get(id=client)
+
+    if not request.user == client.user:
+        raise ValidationError("You don't not have access to update this")
+
     record = Record.objects.get(client=client, appointment=appointment, id=record)
 
     record.is_revoked = True
@@ -227,24 +272,34 @@ def revoke_record_access(request):
 class DoctorShareRecordList(APIView):
     @permission_classes((IsAuthenticated, IsClientUser, IsDoctorUser))
     def get(self, request):
-        share_records = DoctorShareRecord.objects.all()
-        serializer = DoctorShareRecordSerializer(share_records, many=True)
+        if request.user.role == RoleType.Doctor:
+            shared_records = DoctorShareRecord.objects.filter(doctor__user=request.user, record__is_revoked=False)
+        else:
+            shared_records = DoctorShareRecord.objects.filter(client__user=request.user, record__is_revoked=False)
+
+        serializer = DoctorShareRecordSerializer(shared_records, many=True)
         return Response(serializer.data)
 
     @permission_classes((IsAuthenticated, IsClientUser))
     def post(self, request):
-        serializer = AppointmentSerializer(data=request.data)
+        serializer = DoctorShareRecordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         new_data = serializer.validated_data
 
-        if not Doctor.objects.filter(id=new_data.doctor).exists():
+
+        print("data")
+        print(new_data)
+        if not Doctor.objects.filter(id=new_data['doctor'].id).exists():
             raise ValidationError("Invalid doctor id")
 
-        if not Client.objects.filter(id=new_data.client).exists():
+        if not Client.objects.filter(id=new_data['client'].id).exists():
             raise ValidationError("Invalid client id")
 
-        if not Record.objects.filter(id=new_data.record).exists():
+        if not Record.objects.filter(id=new_data['record'].id).exists():
             raise ValidationError("Invalid record id")
+
+        if Record.objects.get(id=new_data['record'].id).is_revoked:
+            raise ValidationError("Record has been revoked by the client")
 
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)

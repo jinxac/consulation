@@ -15,16 +15,16 @@ from rest_framework.exceptions import ValidationError
 
 
 class ClientList(APIView):
-    permission_classes = (IsAuthenticated, IsAssistantUser, IsDoctorUser)
+    permission_classes = (IsAuthenticated, IsClientUser)
 
     def get(self, request):
-        clients = Client.objects.all()
+        clients = Client.objects.filter(user=request.user)
         serializer = ClientSerializer(clients, many=True)
         return Response(serializer.data)
 
 
 class ClientDetail(APIView):
-    # permission_classes = (IsAuthenticated, IsClientUser)
+    permission_classes = (IsAuthenticated, IsClientUser)
 
     def get_object(self, pk):
         try:
@@ -32,13 +32,14 @@ class ClientDetail(APIView):
         except Client.DoesNotExist:
             raise Http404
 
-    @permission_classes((IsAuthenticated, IsDoctorUser, IsAssistantUser, IsClientUser))
     def get(self, request, pk, format=None):
         client = self.get_object(pk)
+        if not request.user == client.user:
+            raise ValidationError("You do not have permission to access this data")
+
         serializer = ClientSerializer(client)
         return Response(serializer.data)
 
-    @permission_classes((IsAuthenticated, IsClientUser, IsAssistantUser))
     def put(self, request, pk, format=None):
         client = self.get_object(pk)
         if not client.user == request.user:
