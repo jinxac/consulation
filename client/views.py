@@ -3,22 +3,20 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import Http404
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 
 from .models import Client
 from .serializer import ClientSerializer
 from .permissions import IsClientUser
-from assistant.permissions import IsAssistantUser
-from doctor.permissions import IsDoctorUser
 from rest_framework.exceptions import ValidationError
 
 
 class ClientList(APIView):
-    permission_classes = (IsAuthenticated, IsClientUser)
+    permission_classes = (IsAuthenticated, IsAdminUser)
 
     def get(self, request):
-        clients = Client.objects.filter(user=request.user)
+        clients = Client.objects.filter()
         serializer = ClientSerializer(clients, many=True)
         return Response(serializer.data)
 
@@ -36,7 +34,6 @@ class ClientDetail(APIView):
         client = self.get_object(pk)
         if not request.user == client.user:
             raise ValidationError("You do not have permission to access this data")
-
         serializer = ClientSerializer(client)
         return Response(serializer.data)
 

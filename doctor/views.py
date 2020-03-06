@@ -2,15 +2,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import Http404
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 from .models import Doctor
 from .serializer import DoctorSerializer
 from rest_framework.exceptions import ValidationError
+from .permissions import IsDoctorUser
 
 
 class DoctorList(APIView):
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated, IsAdminUser)
 
     def get(self, request):
         doctors = Doctor.objects.all()
@@ -19,7 +20,7 @@ class DoctorList(APIView):
 
 
 class DoctorDetail(APIView):
-    permission_classes = (IsAuthenticated, )
+    permission_classes = (IsAuthenticated, IsDoctorUser)
 
     def get_object(self, pk):
         try:

@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.http import Http404
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 from .models import Office
 from .serializer import OfficeSerializer
@@ -12,7 +12,7 @@ from doctor.permissions import IsDoctorUser
 
 
 class OfficeList(APIView):
-    permission_classes = (IsAuthenticated, IsDoctorUser)
+    permission_classes = (IsAuthenticated, IsAdminUser)
 
     def get(self, request):
         doctors = Office.objects.all()
@@ -28,13 +28,13 @@ class OfficeDetail(APIView):
         except Office.DoesNotExist:
             raise Http404
 
-    @permission_classes((IsAuthenticated,))
+    @permission_classes((IsAuthenticated, IsAdminUser))
     def get(self, request, pk, format=None):
         office = self.get_object(pk)
         serializer = OfficeSerializer(office)
         return Response(serializer.data)
 
-    @permission_classes((IsAuthenticated, IsDoctorUser))
+    @permission_classes((IsAuthenticated))
     def put(self, request, pk, format=None):
         office = self.get_object(pk)
         serializer = OfficeSerializer(office, data=request.data)
