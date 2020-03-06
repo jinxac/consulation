@@ -72,7 +72,7 @@ urlpatterns = [
     path('api/v0/appointments/<int:pk>', AppointmentDetail.as_view(), name='appointment'),
     path('api/v0/assistant/appointments/', AppointmentAssistantList.as_view(), name='assistant_appointments'),
     path('api/v0/assistant/appointments/<int:pk>/', AppointmentAssistantDetail.as_view(), name='assistant_appointment'),
-    path('api/v0/appointments/records/', get_appointment_records, name='appointment_records'),
+    path('api/v0/appointments/get-records/', get_appointment_records, name='appointment_records'),
     path('api/v0/feedback/', FeedbackList.as_view(), name='feedback_list'),
     path('api/v0/feedback/<int:pk>/', FeedbackDetail.as_view(), name='feedback'),
 
