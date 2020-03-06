@@ -57,7 +57,7 @@ def validate_appointment(new_data):
 class AppointmentAssistantList(APIView):
     @permission_classes((IsAuthenticated, IsAssistantUser))
     def get(self, request):
-        doctors = Appointment.objects.filter(assistant__user=request.user)
+        doctors = Appointment.objects.filter(assistant__user=request.user, appointment_date=timezone.now())
         serializer = AppointmentSerializer(doctors, many=True)
         return Response(serializer.data)
 
@@ -75,7 +75,7 @@ class AppointmentAssistantList(APIView):
 class AppointmentList(APIView):
     @permission_classes((IsAuthenticated, IsDoctorUser))
     def get(self, request):
-        doctors = Appointment.objects.filter(doctor__user=request.user)
+        doctors = Appointment.objects.filter(doctor__user=request.user, appointment_date=timezone.now())
         serializer = AppointmentSerializer(doctors, many=True)
         return Response(serializer.data)
 
@@ -90,6 +90,8 @@ class AppointmentAssistantDetail(APIView):
     @permission_classes((IsAuthenticated, IsAssistantUser))
     def get(self, request, pk, format=None):
         appointment = self.get_object(pk)
+        if not appointment.assistant.user == request.user:
+            raise ValidationError("You don't have permissions to get this info")
         serializer = AppointmentSerializer(appointment)
         return Response(serializer.data)
 
@@ -117,6 +119,8 @@ class AppointmentDetail(APIView):
     @permission_classes((IsAuthenticated, IsDoctorUser))
     def get(self, request, pk, format=None):
         appointment = self.get_object(pk)
+        if not appointment.doctor.user == request.user:
+            raise ValidationError("You don't have permissions to view this appointment")
         serializer = AppointmentSerializer(appointment)
         return Response(serializer.data)
 
@@ -125,7 +129,6 @@ class AppointmentDetail(APIView):
 @permission_classes((IsAuthenticated, IsDoctorUser, IsClientUser))
 @api_view(["POST"])
 def get_appointment_records(request):
-    print("in herere")
     load_data = json.loads(request.body)
     client_id = load_data.get("client")
     doctor_id = load_data.get("doctor")
@@ -152,18 +155,13 @@ def get_appointment_records(request):
     doctor = Doctor.objects.get(id=doctor_id)
     client = Client.objects.get(id=client_id)
 
-    print("test")
-    print(request.user)
-    print(client.user)
-
     if request.user.role == RoleType.Doctor:
         if not request.user == doctor.user:
-            raise ValidationError("You don't not have access to update this data")
+            raise ValidationError("You don't not have access to records of other doctors")
 
     if request.user.role == RoleType.Client:
         if not request.user == client.user:
-            raise ValidationError("You don't not have access to update this data")
-
+            raise ValidationError("You don't not have access to records of other clients")
 
     records = Record.objects.filter(client=client, appointment__doctor=doctor, is_revoked=False)
 
@@ -207,6 +205,11 @@ class UploadRecordView(viewsets.ModelViewSet):
         if Record.objects.filter(client=client.id, appointment=appointment.id).exists():
             raise ValidationError("Already have a record for this appointment")
 
+        client = Client.objects.get(id=client.id)
+
+        if not self.request.user == client.user:
+            raise ValidationError("You are not authorized to create record for another user")
+
         doc_id = self.save_document(file_obj, appointment.id, client.id)
         serializer.save(doc_id=doc_id)
 
@@ -224,6 +227,11 @@ class UploadRecordView(viewsets.ModelViewSet):
 
         if not Appointment.objects.filter(id=appointment.id).exists():
             raise ValidationError("Invalid Appointment id")
+
+        client = Client.objects.get(id=client.id)
+
+        if not self.request.user == client.user:
+            raise ValidationError("You are not authorized to upload record for another user")
 
         doc_id = self.save_document(file_obj, appointment.id, client.id)
         serializer.save(doc_id=doc_id)
@@ -286,9 +294,6 @@ class DoctorShareRecordList(APIView):
         serializer.is_valid(raise_exception=True)
         new_data = serializer.validated_data
 
-
-        print("data")
-        print(new_data)
         if not Doctor.objects.filter(id=new_data['doctor'].id).exists():
             raise ValidationError("Invalid doctor id")
 
@@ -306,17 +311,25 @@ class DoctorShareRecordList(APIView):
 
 
 class DoctorShareRecordDetail(APIView):
-
     permission_classes = (IsAuthenticated, IsDoctorUser, IsClientUser)
 
-    def get_object(self, pk):
+    def get_object(self, request, pk):
         try:
-            return DoctorShareRecord.objects.get(pk=pk)
+            doctor_share_record = DoctorShareRecord.objects.get(pk=pk)
+            if request.user.role == RoleType.Doctor:
+                if not doctor_share_record.doctor.user == request.user:
+                    raise ValidationError("You cannot see shared records for other doctors")
+            else:
+                if not doctor_share_record.client.user == request.user:
+                    raise ValidationError("You cannot see shared records for other clients")
+
+            return doctor_share_record
+
         except Appointment.DoesNotExist:
             raise Http404
 
     def get(self, request, pk, format=None):
-        shared_record = self.get_object(pk)
+        shared_record = self.get_object(request, pk)
         serializer = AppointmentSerializer(shared_record)
         return Response(serializer.data)
 
@@ -345,7 +358,7 @@ class FeedbackDetail(APIView):
         except Feedback.DoesNotExist:
             raise Http404
 
-    @permission_classes((IsDoctorUser, IsClientUser, IsAssistantUser, IsAuthenticated))
+    @permission_classes((IsAuthenticated, ))
     def get(self, request, pk, format=None):
         feedback = self.get_object(pk)
         serializer = FeedbackSerializer(feedback)
