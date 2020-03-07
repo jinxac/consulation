@@ -9,6 +9,7 @@ class RoleType(models.IntegerChoices):
     Doctor = 0
     Assistant = 1
     Client = 2
+    Admin = 3
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -16,6 +17,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated_at = models.DateTimeField(auto_now=True)
     email = models.EmailField(max_length=254, unique=True)
     is_active = models.BooleanField(default=False)
+    is_staff = models.BooleanField(default=False)
     dob = models.DateTimeField(null=True, blank=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
