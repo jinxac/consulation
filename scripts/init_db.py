@@ -148,6 +148,14 @@ def create_users():
             "phone_number": "9886268124",
             "role": 2
         },
+        {
+            "email": "admin@admin.com",
+            "password": "admin123",
+            "first_name": "admin",
+            "last_name": "admin",
+            "phone_number": "9887628012",
+            "role": 3
+        }
     ]
 
     for user in users:
