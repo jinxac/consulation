@@ -26,8 +26,6 @@ from office.views import OfficeList, OfficeDetail
 from assistant.views import AssistantList, AssistantDetail
 from appointment.views import AppointmentList, \
     AppointmentDetail, \
-    AppointmentAssistantList,\
-    AppointmentAssistantDetail,\
     UploadRecordView, \
     DoctorShareRecordList, \
     DoctorShareRecordDetail, \
@@ -40,7 +38,7 @@ from rest_framework_simplejwt import views as jwt_views
 
 from rest_framework import routers
 router = routers.DefaultRouter()
-router.register('clients/records/', UploadRecordView, basename='cutareadel')
+router.register('clients/records', UploadRecordView)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -70,8 +68,6 @@ urlpatterns = [
     # Appointment
     path('api/v0/appointments/', AppointmentList.as_view(), name='appointments'),
     path('api/v0/appointments/<int:pk>', AppointmentDetail.as_view(), name='appointment'),
-    path('api/v0/assistant/appointments/', AppointmentAssistantList.as_view(), name='assistant_appointments'),
-    path('api/v0/assistant/appointments/<int:pk>/', AppointmentAssistantDetail.as_view(), name='assistant_appointment'),
     path('api/v0/appointments/get-records/', get_appointment_records, name='appointment_records'),
     path('api/v0/feedback/', FeedbackList.as_view(), name='feedback_list'),
     path('api/v0/feedback/<int:pk>/', FeedbackDetail.as_view(), name='feedback'),
