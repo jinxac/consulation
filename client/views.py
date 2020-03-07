@@ -11,18 +11,26 @@ from .serializer import ClientSerializer
 from .permissions import IsClientUser
 from rest_framework.exceptions import ValidationError
 
+from doctor.permissions import IsDoctorUser
+from assistant.permissions import IsAssistantUser
+
+from authservice.models import RoleType
+
 
 class ClientList(APIView):
-    permission_classes = (IsAuthenticated, IsAdminUser)
+    permission_classes = (IsAuthenticated, IsAdminUser | IsClientUser | IsDoctorUser | IsAssistantUser)
 
     def get(self, request):
-        clients = Client.objects.filter()
+        if request.user.role == RoleType.Client:
+            clients = Client.objects.filter(user=request.user)
+        else:
+            clients = Client.objects.all()
         serializer = ClientSerializer(clients, many=True)
         return Response(serializer.data)
 
 
 class ClientDetail(APIView):
-    permission_classes = (IsAuthenticated, IsClientUser)
+    permission_classes = (IsAuthenticated,  IsAdminUser | IsClientUser | IsDoctorUser | IsAssistantUser)
 
     def get_object(self, pk):
         try:
@@ -32,7 +40,7 @@ class ClientDetail(APIView):
 
     def get(self, request, pk, format=None):
         client = self.get_object(pk)
-        if not request.user == client.user:
+        if request.user.role == RoleType.Client and not request.user == client.user:
             raise ValidationError("You do not have permission to access this data")
         serializer = ClientSerializer(client)
         return Response(serializer.data)
