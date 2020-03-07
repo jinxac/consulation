@@ -39,7 +39,7 @@ class Appointment(LogicalDeleteModel):
     assistant = models.ForeignKey(Assistant, on_delete=models.CASCADE)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    appointment_date = models.DateTimeField()
+    appointment_date = models.DateField()
     status = models.IntegerField(choices=AppointmentStatus.choices)
 
 

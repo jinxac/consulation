@@ -9,9 +9,11 @@ from .serializer import DoctorSerializer
 from rest_framework.exceptions import ValidationError
 from .permissions import IsDoctorUser
 
+from authservice.models import RoleType
+
 
 class DoctorList(APIView):
-    permission_classes = (IsAuthenticated, IsAdminUser)
+    permission_classes = (IsAuthenticated, )
 
     def get(self, request):
         doctors = Doctor.objects.all()

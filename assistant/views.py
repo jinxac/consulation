@@ -4,24 +4,31 @@ from django.http import Http404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
+from authservice.models import RoleType
+
 from .models import Assistant
 from .serializer import AssistantSerializer
 from .permissions import IsAssistantUser
+
 
 from rest_framework.exceptions import ValidationError
 
 
 class AssistantList(APIView):
-    permission_classes = (IsAuthenticated, IsAdminUser)
+    permission_classes = (IsAuthenticated, IsAdminUser | IsAssistantUser, )
 
     def get(self, request):
-        doctors = Assistant.objects.all()
-        serializer = AssistantSerializer(doctors, many=True)
+        if request.user.role == RoleType.Admin:
+            assistants = Assistant.objects.all()
+        else:
+            assistants = Assistant.objects.filter(user=request.user)
+
+        serializer = AssistantSerializer(assistants, many=True)
         return Response(serializer.data)
 
 
 class AssistantDetail(APIView):
-    permission_classes = (IsAuthenticated, IsAssistantUser)
+    permission_classes = (IsAuthenticated, IsAdminUser | IsAssistantUser)
 
     def get_object(self, pk):
         try:

@@ -1,4 +1,4 @@
-from django.views.decorators.http import require_http_methods
+from django.db.transaction import atomic
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.views import APIView
 from rest_framework import generics
@@ -6,9 +6,8 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status, viewsets
 from django.http import Http404, JsonResponse
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from datetime import timedelta
-from django.utils import timezone
 from django.conf import settings
 from rest_framework.exceptions import ValidationError
 from django.views.decorators.csrf import csrf_exempt
@@ -16,6 +15,7 @@ import uuid
 import boto
 from boto.s3.key import Key
 import json
+from datetime import datetime
 
 
 from doctor.models import Doctor
@@ -24,7 +24,6 @@ from assistant.permissions import IsAssistantUser
 from doctor.permissions import IsDoctorUser
 from client.permissions import IsClientUser
 from authservice.models import RoleType
-
 
 from .models import Appointment, AppointmentStatus, DoctorShareRecord, Record, Feedback
 from .serializer import AppointmentSerializer,\
@@ -38,12 +37,15 @@ from .exceptions import AppointmentExistsException, \
 
 def validate_appointment(new_data):
     appointments = Appointment.objects.filter(appointment_date=new_data['appointment_date'])
-    if new_data['appointment_date'] < timezone.now():
+    print(new_data['appointment_date'])
+    print(datetime.today())
+    if new_data['appointment_date'] < datetime.today().date():
         raise AppointmentStartDateException()
 
-    if new_data['appointment_date'] >= timezone.now() + timedelta(days=7):
+    if new_data['appointment_date'] >= datetime.today().date() + timedelta(days=7):
         raise AppointmentEndDateException()
 
+    print("reached heree")
     for appointment in appointments:
         if appointment.start_time <= new_data['start_time'] <= appointment.end_time \
                 and appointment.status == AppointmentStatus.Created:
@@ -54,61 +56,34 @@ def validate_appointment(new_data):
             raise AppointmentExistsException()
 
 
-class AppointmentAssistantList(APIView):
-    @permission_classes((IsAuthenticated, IsAssistantUser))
+class AppointmentList(APIView):
+    @permission_classes((IsAuthenticated, IsAdminUser | IsDoctorUser | IsAssistantUser | IsClientUser))
     def get(self, request):
-        doctors = Appointment.objects.filter(
-            assistant__user=request.user,
-            appointment_date__gte=(timezone.now()),
-            appointment_date__lte=(timezone.now() + timedelta(days=1))
-        )
-        serializer = AppointmentSerializer(doctors, many=True)
+        start_date = datetime.today()
+        end_date = start_date + timedelta(days=1)
+        if request.user.role == RoleType.Admin:
+            appointments = Appointment.objects.all()
+        elif request.user.role == RoleType.Doctor:
+            appointments = Appointment.objects.filter(
+                doctor__user=request.user,
+                appointment_date__range=[start_date, end_date]
+            )
+        elif request.user.role == RoleType.Assistant:
+            appointments = Appointment.objects.filter(
+                assistant__user=request.user,
+                appointment_date__range=[start_date, end_date]
+            )
+        else:
+            appointments = Appointment.objects.filter(
+                client__user=request.user,
+                appointment_date__range=[start_date, end_date]
+            )
+        serializer = AppointmentSerializer(appointments, many=True)
         return Response(serializer.data)
 
     @permission_classes((IsAuthenticated, IsAssistantUser))
     def post(self, request):
         serializer = AppointmentSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        new_data = serializer.validated_data
-
-        validate_appointment(new_data)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-class AppointmentList(APIView):
-    @permission_classes((IsAuthenticated, IsDoctorUser))
-    def get(self, request):
-        doctors = Appointment.objects.filter(
-            doctor__user=request.user,
-            appointment_date__gte=(timezone.now()),
-            appointment_date__lte=(timezone.now() + timedelta(days=1))
-        )
-        serializer = AppointmentSerializer(doctors, many=True)
-        return Response(serializer.data)
-
-
-class AppointmentAssistantDetail(APIView):
-    def get_object(self, pk):
-        try:
-            return Appointment.objects.get(pk=pk)
-        except Appointment.DoesNotExist:
-            raise Http404
-
-    @permission_classes((IsAuthenticated, IsAssistantUser))
-    def get(self, request, pk, format=None):
-        appointment = self.get_object(pk)
-        if not appointment.assistant.user == request.user:
-            raise ValidationError("You don't have permissions to get this info")
-        serializer = AppointmentSerializer(appointment)
-        return Response(serializer.data)
-
-    @permission_classes((IsAuthenticated, IsAssistantUser))
-    def put(self, request, pk, format=None):
-        appointment = self.get_object(pk)
-        if not appointment.assistant.user == request.user:
-            raise ValidationError("You don't have permissions to update this appointment")
-        serializer = AppointmentSerializer(appointment, data=request.data)
         serializer.is_valid(raise_exception=True)
         new_data = serializer.validated_data
 
@@ -124,13 +99,33 @@ class AppointmentDetail(APIView):
         except Appointment.DoesNotExist:
             raise Http404
 
-    @permission_classes((IsAuthenticated, IsDoctorUser))
+    @permission_classes((IsAuthenticated, IsAdminUser | IsAssistantUser | IsDoctorUser))
     def get(self, request, pk, format=None):
         appointment = self.get_object(pk)
-        if not appointment.doctor.user == request.user:
-            raise ValidationError("You don't have permissions to view this appointment")
+        if request.user.role == RoleType.Assistant and not appointment.assistant.user == request.user:
+            raise ValidationError("You don't have permissions to get this info")
+
+        elif request.user.role == RoleType.Doctor and not appointment.doctor.user == request.user:
+            raise ValidationError("You don't have permissions to get this info")
+
+        elif request.user.role == RoleType.Client and not appointment.client.user == request.user:
+            raise ValidationError("You don't have permissions to get this info")
+
         serializer = AppointmentSerializer(appointment)
         return Response(serializer.data)
+
+    @permission_classes((IsAuthenticated, IsAssistantUser))
+    def put(self, request, pk, format=None):
+        appointment = self.get_object(pk)
+        if not appointment.assistant.user == request.user:
+            raise ValidationError("You don't have permissions to update this appointment")
+        serializer = AppointmentSerializer(appointment, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_data = serializer.validated_data
+
+        validate_appointment(new_data)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @csrf_exempt
@@ -248,6 +243,7 @@ class UploadRecordView(viewsets.ModelViewSet):
 @csrf_exempt
 @permission_classes((IsAuthenticated, IsClientUser))
 @api_view(["POST"])
+@atomic
 def revoke_record_access(request):
     load_data = json.loads(request.body)
     appointment = load_data.get("appointment")
@@ -274,6 +270,7 @@ def revoke_record_access(request):
 
     client = Client.objects.get(id=client)
 
+
     if not request.user == client.user:
         raise ValidationError("You don't not have access to update this")
 
@@ -282,11 +279,14 @@ def revoke_record_access(request):
     record.is_revoked = True
     record.save()
 
+    # Deleting the record from shared access
+    # DoctorShareRecord(client=client, record=record).delete()
+
     return JsonResponse({"message": "Successully revoked"}, safe=False)
 
 
 class DoctorShareRecordList(APIView):
-    @permission_classes((IsAuthenticated, IsClientUser, IsDoctorUser))
+    @permission_classes((IsAuthenticated, IsClientUser | IsDoctorUser))
     def get(self, request):
         if request.user.role == RoleType.Doctor:
             shared_records = DoctorShareRecord.objects.filter(doctor__user=request.user, record__is_revoked=False)
@@ -319,7 +319,7 @@ class DoctorShareRecordList(APIView):
 
 
 class DoctorShareRecordDetail(APIView):
-    permission_classes = (IsAuthenticated, IsDoctorUser, IsClientUser)
+    permission_classes = (IsAuthenticated, IsDoctorUser | IsClientUser)
 
     def get_object(self, request, pk):
         try:
@@ -338,7 +338,7 @@ class DoctorShareRecordDetail(APIView):
 
     def get(self, request, pk, format=None):
         shared_record = self.get_object(request, pk)
-        serializer = AppointmentSerializer(shared_record)
+        serializer = DoctorShareRecordSerializer(shared_record)
         return Response(serializer.data)
 
 

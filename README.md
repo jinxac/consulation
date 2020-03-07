@@ -12,7 +12,7 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
    1. `POST /api/v0/register/`
         
         Signs up a user and based on role assigns the permissions and creates Doctor, Client or Assistant
-        object in respective tables. 
+        object in respective tables. Also creates an admin role to manage the application
         
    2. `POST /api/token/`
    
@@ -27,12 +27,12 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
    1. `GET /api/v0/doctors/`
     
         Get the list of doctors. This data is only available to authenticated users. This can be used
-        by clients, assistant as we as other doctors
+        by clients, assistants as well as the other doctors
        
    2. `GET /api/v0/doctors/:id`
 
         Get the detail view of a doctor. This data is only available to authenticated users. This can be used
-        by clients, assistant as we as other doctors
+        by clients, assistant as well as the other doctors
        
    3. `PUT /api/v0/doctors/:id`
     
@@ -43,13 +43,13 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
 
    1. `GET /api/v0/assistants/`
     
-        Get the list of assistants. This data is only available to authenticated doctors and assistants. In future, 
+        Get the list of assistants. This data is only available to admin user and assistant user(For his/her data). In future, 
         this can further be divided and only doctors who manage assistants can view the data.
        
    2. `GET /api/v0/assistants/:id`
 
-        Get the detail view of an assistant. his data is only available to authenticated doctors and assistants. In future, 
-        this can further be divided and only doctors who manage assistants can view the data.
+        Get the detail view of an assistant. his/her data is only available to authenticated admins and assistant himself/herself.
+         In future, this can further be divided and can be accessed by doctors who manage assistants can view the data.
        
    3. `PUT /api/v0/assistants/:id`
     
@@ -71,7 +71,7 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
   
    3. `PUT /api/v0/clients/:id`
     
-        Update the client information. This can be done by client or by assistants.
+        Update the client information. This can be done by client.
        
    4.  `POST /api/v0/clients/add-record`
    
@@ -90,7 +90,7 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
 
    1. `GET /api/v0/offices/`
     
-        Get the list of offices. This data is available only to authenticated users.
+        Get the list of offices. This data is available only to authenticated users
        
    2. `GET /api/v0/offices/:id`
 
@@ -99,14 +99,18 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
    3. `PUT /api/v0/offices/:id`
     
         Updates an office. This operation can only be done by Doctors. In future, a super admin can be created
-        to do CRUD on office.
+        to do CRUD on office. Only admin user can perform this action
+   
+   4. `POST /api/v0/offices`
+   
+        Adds a new office. Only admin user can perform this action
    
 
 **Appointments**
 
    1. `GET /api/v0/appointments/`
     
-        Get the list of appointments. This data is available only to doctors and assistants.
+        Get the list of appointments. This data is available only to doctors, assistants and clients.
         
    2. `POST /api/v0/appointments/`
    
@@ -134,11 +138,12 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
 
    1. `GET /api/v0/shared-records`
    
-       Gets shared records for a doctor. This data is only visible to doctors and clients
+       Gets non revoked shared records for a doctor. This data is only visible to doctors and clients
        
    2. `POST /api/v0/shared-records`
    
        Share a non revoked record with a doctor.
+       
  
  
 **Feedback**
@@ -158,7 +163,7 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
        
    4. `GET /api/v0/feedback/:id`
    
-        Gets list of feedback. This is visible to authenticated users
+       Gets list of feedback. This is visible to authenticated users
    
         
 ### Steps
@@ -166,6 +171,6 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
    1. `virtualvenv venv`
    2. `source venv/bin/activate`
    3. `pip install -r requirements.txt`
-   4. `python -m scripts.rba`
+   4. `python -m scripts.init_db`
    4. `python manage.py runserver`
  

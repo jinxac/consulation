@@ -12,7 +12,7 @@ from doctor.permissions import IsDoctorUser
 
 
 class OfficeList(APIView):
-    permission_classes = (IsAuthenticated, IsAdminUser)
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         doctors = Office.objects.all()
@@ -28,13 +28,13 @@ class OfficeDetail(APIView):
         except Office.DoesNotExist:
             raise Http404
 
-    @permission_classes((IsAuthenticated, IsAdminUser))
+    @permission_classes((IsAuthenticated, ))
     def get(self, request, pk, format=None):
         office = self.get_object(pk)
         serializer = OfficeSerializer(office)
         return Response(serializer.data)
 
-    @permission_classes((IsAuthenticated))
+    @permission_classes((IsAuthenticated, IsAdminUser))
     def put(self, request, pk, format=None):
         office = self.get_object(pk)
         serializer = OfficeSerializer(office, data=request.data)

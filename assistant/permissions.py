@@ -7,6 +7,8 @@ class IsAssistantUser(permissions.BasePermission):
         try:
             is_in_group = Group.objects.get(name='assistant').user_set.filter(id=request.user.id).exists()
         except Group.DoesNotExist:
-            return False
+            print("error")
+            # return False
 
+        print("is in group", is_in_group)
         return request.user and is_in_group
