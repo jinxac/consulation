@@ -81,10 +81,6 @@ WSGI_APPLICATION = 'consultation.wsgi.application'
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    # }
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'consultation',
@@ -117,9 +113,6 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.FileUploadParser'
     ]
 }
 
@@ -149,3 +142,9 @@ STATIC_URL = '/static/'
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=10)
 }
+
+# TODO: Please configure following keys
+# AWS_ACCESS_KEY = ""
+# AWS_SECRET_KEY = ""
+# AWS_S3_ACCOUNTS_BUCKET = "client-records"
+

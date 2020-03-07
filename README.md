@@ -163,7 +163,7 @@ Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fb
        
    4. `GET /api/v0/feedback/:id`
    
-        Gets list of feedback. This is visible to authenticated users
+       Gets list of feedback. This is visible to authenticated users
    
         
 ### Steps
