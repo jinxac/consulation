@@ -1,9 +1,5 @@
 # Consultation
 
-### Database Scheme
-
-Please find the DataBase Scheme [here](https://my.vertabelo.com/doc/vLuKE8xoz8fbOAbmOAVgRCoTlYPNOlvd).
-
 ### Features
 
 
