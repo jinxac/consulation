@@ -18,7 +18,7 @@ from django.urls import path
 from django.conf.urls import include, url
 
 
-from doctor.views import DoctorList, DoctorDetail
+from doctor.views import DoctorList, DoctorDetail, update_doctor_availability
 from client.views import ClientList, ClientDetail
 from authservice.views import UserSignupView
 
@@ -32,7 +32,8 @@ from appointment.views import AppointmentList, \
     get_appointment_records, \
     revoke_record_access, \
     FeedbackList, \
-    FeedbackDetail
+    FeedbackDetail, \
+    un_revoke_record_access
 
 from rest_framework_simplejwt import views as jwt_views
 
@@ -56,6 +57,7 @@ urlpatterns = [
     path('api/v0/clients/', ClientList.as_view(), name='clients'),
     path('api/v0/clients/<int:pk>/', ClientDetail.as_view(), name='client'),
     path('api/v0/clients/revoke-record/', revoke_record_access, name='revoke-record'),
+    path('api/v0/clients/un-revoke-record/', un_revoke_record_access, name='un-revoke-record'),
 
     # Office
     path('api/v0/offices/', OfficeList.as_view(), name='offices'),
@@ -64,6 +66,7 @@ urlpatterns = [
     # Assistant
     path('api/v0/assistants/', AssistantList.as_view(), name='assistants'),
     path('api/v0/assistants/<int:pk>/', AssistantDetail.as_view(), name='assistant'),
+    path('api/v0/assistants/update_doctor_availability/', update_doctor_availability, name="update_doctor_availability"),
 
     # Appointment
     path('api/v0/appointments/', AppointmentList.as_view(), name='appointments'),

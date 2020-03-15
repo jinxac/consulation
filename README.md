@@ -38,6 +38,9 @@
     
         Updates a doctor. The respective doctor can only change his data and not of the other doctors.
    
+   4. `POST /api/v0/appointments/get-records/`
+   
+        Gets the records for an appointment
 
 **Assistants**
 
@@ -82,7 +85,9 @@
        Revokes the access to the record. The client or the doctor can no longer see the particular record
       
        
+   6.  `POST /api/v0/appointments/get-records/`
    
+       Gets the records for an appointment
      
 
 

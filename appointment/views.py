@@ -1,7 +1,6 @@
 from django.db.transaction import atomic
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.views import APIView
-from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status, viewsets
@@ -18,7 +17,7 @@ import json
 from datetime import datetime
 
 
-from doctor.models import Doctor
+from doctor.models import Doctor, DoctorAvailability
 from client.models import Client
 from assistant.permissions import IsAssistantUser
 from doctor.permissions import IsDoctorUser
@@ -37,15 +36,29 @@ from .exceptions import AppointmentExistsException, \
 
 def validate_appointment(new_data):
     appointments = Appointment.objects.filter(appointment_date=new_data['appointment_date'])
-    print(new_data['appointment_date'])
-    print(datetime.today())
     if new_data['appointment_date'] < datetime.today().date():
         raise AppointmentStartDateException()
 
     if new_data['appointment_date'] >= datetime.today().date() + timedelta(days=7):
         raise AppointmentEndDateException()
 
-    print("reached heree")
+    doctor = new_data['doctor']
+    doctor_availabilities = DoctorAvailability.objects.filter(doctor=doctor, day_of_week=datetime.today().weekday())
+
+    if not len(doctor_availabilities):
+        raise ValidationError("Doctor availability not present")
+
+    is_doctor_available = False
+
+    for doctor_availability in doctor_availabilities:
+        if  doctor_availability.start_time <= new_data['start_time'] <= doctor_availability.end_time:
+            is_doctor_available = True
+            break
+
+    if not is_doctor_available:
+        raise ValidationError("Doctor not available for given slot")
+
+
     for appointment in appointments:
         if appointment.start_time <= new_data['start_time'] <= appointment.end_time \
                 and appointment.status == AppointmentStatus.Created:
@@ -60,7 +73,7 @@ class AppointmentList(APIView):
     @permission_classes((IsAuthenticated, IsAdminUser | IsDoctorUser | IsAssistantUser | IsClientUser))
     def get(self, request):
         start_date = datetime.today()
-        end_date = start_date + timedelta(days=1)
+        end_date = start_date + timedelta(days=2)
         if request.user.role == RoleType.Admin:
             appointments = Appointment.objects.all()
         elif request.user.role == RoleType.Doctor:
@@ -129,13 +142,16 @@ class AppointmentDetail(APIView):
 
 
 @csrf_exempt
-@permission_classes((IsAuthenticated, IsDoctorUser, IsClientUser))
 @api_view(["POST"])
+@permission_classes((IsAuthenticated, IsDoctorUser | IsClientUser))
 def get_appointment_records(request):
     load_data = json.loads(request.body)
     client_id = load_data.get("client")
     doctor_id = load_data.get("doctor")
     appointment_id = load_data.get("appointment")
+
+    print("user")
+    print(request.user)
 
     if appointment_id is None:
         raise ValidationError("appointment id required")
@@ -241,9 +257,9 @@ class UploadRecordView(viewsets.ModelViewSet):
 
 
 @csrf_exempt
-@permission_classes((IsAuthenticated, IsClientUser))
 @api_view(["POST"])
 @atomic
+@permission_classes((IsAuthenticated, IsClientUser))
 def revoke_record_access(request):
     load_data = json.loads(request.body)
     appointment = load_data.get("appointment")
@@ -284,6 +300,50 @@ def revoke_record_access(request):
 
     return JsonResponse({"message": "Successully revoked"}, safe=False)
 
+
+@csrf_exempt
+@api_view(["POST"])
+@atomic
+@permission_classes((IsAuthenticated, IsClientUser))
+def un_revoke_record_access(request):
+    load_data = json.loads(request.body)
+    appointment = load_data.get("appointment")
+    client = load_data.get("client")
+    record = load_data.get("record")
+
+    if appointment is None:
+        raise ValidationError("appointment id required")
+
+    if not Appointment.objects.filter(id=appointment).exists():
+        raise ValidationError("Invalid appointment id")
+
+    if client is None:
+        raise ValidationError("client id required")
+
+    if not Client.objects.filter(id=client).exists():
+        raise ValidationError("Invalid client id")
+
+    if record is None:
+        raise ValidationError("record id required")
+
+    if not Record.objects.filter(id=record).exists():
+        raise ValidationError("Invalid record id")
+
+    client = Client.objects.get(id=client)
+
+
+    if not request.user == client.user:
+        raise ValidationError("You don't not have access to update this")
+
+    record = Record.objects.get(client=client, appointment=appointment, id=record)
+
+    record.is_revoked = False
+    record.save()
+
+    # Deleting the record from shared access
+    # DoctorShareRecord(client=client, record=record).delete()
+
+    return JsonResponse({"message": "Successully un revoked"}, safe=False)
 
 class DoctorShareRecordList(APIView):
     @permission_classes((IsAuthenticated, IsClientUser | IsDoctorUser))
