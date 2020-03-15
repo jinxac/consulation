@@ -46,6 +46,7 @@ class Appointment(LogicalDeleteModel):
 class Record(LogicalDeleteModel):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     doc_id = models.CharField(max_length=255, null=True, blank=True)
+    # TODO: Can be made one to one, for now kept it flexible
     appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, null=True)
     is_revoked = models.BooleanField(default=False)
 
@@ -66,6 +67,7 @@ class DoctorShareRecord(LogicalDeleteModel):
 class Feedback(LogicalDeleteModel):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
+    # TODO: Can be made one to one, kept it flexible for now
     appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE)
     is_anonymous = models.BooleanField(default=False)
     rating = models.IntegerField()

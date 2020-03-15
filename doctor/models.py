@@ -10,12 +10,13 @@ from office.models import Office
 from .manager import DoctorManager
 
 
-class Specialization(LogicalDeleteModel):
-    specialization_name = models.CharField(max_length=100)
+# class Specialization(LogicalDeleteModel):
+#     specialization_name = models.CharField(max_length=100)
 
 
 class Doctor(LogicalDeleteModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    # TODO: Need to modify the model to make it work for multiple offices, for now it can only work with single office
     office = models.ForeignKey(Office, on_delete=models.CASCADE, null=True)
     professional_statement = models.CharField(max_length=300, null=True, blank=True)
     practicing_from = models.DateTimeField(blank=True, null=True)
